@@ -55,6 +55,31 @@ std::string uint_2_string(uint32_t u, uint8_t length)
     return res;
 }
 
+/**
+ * @brief apply the inverter for the given gate
+ */
+std::string apply_inverter(std::string entry)
+{
+    std::string res;
+    uint i = 0;
+
+    for (i = 0u; i < entry.size(); ++i)
+    {
+        if (entry[i] == '0')
+            res += '1';
+        else
+            res += '0';
+    }
+    return res;
+}
+
+/**
+ * @brief compute the truth table for the given gate
+ * @param entry the Boolean function (truth table) of the given gate
+ * @param a the input truth table
+ * @param b the input truth table
+ * @return the truth table of the given gate
+ */
 std::string compute_new_tt_2(std::string entry, const std::string &a, const std::string &b)
 {
     std::string res;
@@ -142,12 +167,12 @@ void explore_2_1()
     std::cout << "symmetry gates:" << std::endl;
     for (auto fc : fcs_s)
     {
-        std::cout << gate_map2[fc] << std::endl;
+        std::cout << "\t" << gate_map2[fc] << std::endl;
     }
     std::cout << "unsymmetry gates:" << std::endl;
     for (auto fc : fcs_us)
     {
-        std::cout << gate_map2[fc] << std::endl;
+        std::cout << "\t" << gate_map2[fc] << std::endl;
     }
 }
 
@@ -155,8 +180,8 @@ void explore_2_2()
 {
     uint i = 0u, j = 0u, k = 0u, l = 0u;
     bool added = true;
-    std::set<std::pair<std::string, std::string>> fcs_s;
-    std::set<std::pair<std::string, std::string>> fcs_us;
+    std::set<std::tuple<std::string, std::string>> fcs;
+
     for (i = 0u; i < 16u; ++i)
     {
         for (l = i + 1; l < 16u; ++l)
@@ -194,24 +219,86 @@ void explore_2_2()
             }
             if (tmp_basic_input2.size() == 16u)
             {
-                if (basic_symmetry_gates.find(entry1) == basic_symmetry_gates.end() || basic_symmetry_gates.find(entry2) == basic_symmetry_gates.end())
-                    fcs_us.insert(std::make_pair(std::min(entry1, entry2), std::max(entry1, entry2)));
-                else
-                    fcs_s.insert(std::make_pair(std::min(entry1, entry2), std::max(entry1, entry2)));
+                std::vector<std::string> entries({entry1, entry2});
+                std::sort(entries.begin(), entries.end());
+                fcs.insert(std::make_tuple(entries[0], entries[1]));
             }
         }
     }
 
-    std::cout << "symmetry gates:" << std::endl;
-    for (auto fc : fcs_s)
+    for (auto fc : fcs)
     {
-        std::cout << gate_map2[fc.first] << ", " << gate_map2[fc.second] << std::endl;
+        std::cout << "\t" << gate_map2[std::get<0>(fc)] << ", " << gate_map2[std::get<1>(fc)] << std::endl;
+    }
+}
+
+void explore_2_3()
+{
+    uint i = 0u, l = 0u, m = 0u, j = 0u, k = 0u, u = 0u;
+    bool added = true;
+
+    std::set<std::tuple<std::string, std::string, std::string>> fcs;
+
+    for (i = 0u; i < 16u; ++i)
+    {
+        for (l = i + 1; l < 16u; ++l)
+        {
+            for (m = l + 1; m < 16u; ++m)
+            {
+                std::string entry1 = uint_2_string(i, 4);
+                std::string entry2 = uint_2_string(l, 4);
+                std::string entry3 = uint_2_string(m, 4);
+
+                std::vector<std::string> tmp_basic_input2 = basic_input2;
+                std::set<std::string> tmp_set(tmp_basic_input2.begin(), tmp_basic_input2.end());
+
+                added = true;
+                while (added)
+                {
+                    added = false;
+                    for (j = 0; j < tmp_basic_input2.size(); ++j)
+                    {
+                        for (k = 0; k < tmp_basic_input2.size(); ++k)
+                        {
+
+                            std::string newTT1 = compute_new_tt_2(entry1, tmp_basic_input2[j], tmp_basic_input2[k]);
+                            std::string newTT2 = compute_new_tt_2(entry2, tmp_basic_input2[j], tmp_basic_input2[k]);
+                            std::string newTT3 = compute_new_tt_2(entry3, tmp_basic_input2[j], tmp_basic_input2[k]);
+
+                            if (tmp_set.find(newTT1) == tmp_set.end())
+                            {
+                                tmp_basic_input2.emplace_back(newTT1);
+                                tmp_set.insert(newTT1);
+                                added = true;
+                            }
+                            if (tmp_set.find(newTT2) == tmp_set.end())
+                            {
+                                tmp_basic_input2.emplace_back(newTT2);
+                                tmp_set.insert(newTT2);
+                                added = true;
+                            }
+                            if (tmp_set.find(newTT3) == tmp_set.end())
+                            {
+                                tmp_basic_input2.emplace_back(newTT3);
+                                tmp_set.insert(newTT3);
+                                added = true;
+                            }
+                        }
+                    }
+                }
+                if (tmp_basic_input2.size() == 16u)
+                {
+                    std::vector<std::string> entries({entry1, entry2, entry3});
+                    std::sort(entries.begin(), entries.end());
+                    fcs.insert(std::make_tuple(entries[0], entries[1], entries[2]));
+                }
+            }
+        }
     }
 
-    std::cout << "unsymmetry gates:" << std::endl;
-    for (auto fc : fcs_us)
+    for (auto fc : fcs)
     {
-        std::cout << gate_map2[fc.first] << ", " << gate_map2[fc.second] << std::endl;
+        std::cout << "\t" << gate_map2[std::get<0>(fc)] << ", " << gate_map2[std::get<1>(fc)] << ", " << gate_map2[std::get<2>(fc)] << std::endl;
     }
 }
 
@@ -266,6 +353,8 @@ int main(int argc, char **argv)
     explore_2_1();
     std::cout << "Two gates:" << std::endl;
     explore_2_2();
+    std::cout << "Three gates:" << std::endl;
+    explore_2_3();
 
     // std::cout << "Funational Completeness exploration for 3-inputs gate:" << std::endl;
     // explore_3_1();
